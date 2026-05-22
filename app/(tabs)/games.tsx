@@ -2,6 +2,7 @@ import AddGameModal from "@/components/games/AddGameModal";
 import GameCard from "@/components/games/GameCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { firestore } from "@/firebase";
+import { pickAndUploadGameImage } from "@/services/uploadGameImage";
 import type { Game } from "@/types/game";
 import { useRouter } from "expo-router";
 import { addDoc, collection, getDocs } from "firebase/firestore";
@@ -16,114 +17,131 @@ import {
 } from "react-native";
 
 export default function GamesScreen() {
-  const { isLoggedIn } = useAuth();
-  const router = useRouter();
+    const { isLoggedIn } = useAuth();
+    const router = useRouter();
 
-  const [games, setGames] = useState<Game[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [gameTitle, setGameTitle] = useState("");
-  const [gameDescription, setGameDescription] = useState("");
-  const [gameImageUrl, setGameImageUrl] = useState("");
-  const [gameRoute, setGameRoute] = useState("");
+    const [games, setGames] = useState<Game[]>([]);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [gameTitle, setGameTitle] = useState("");
+    const [gameDescription, setGameDescription] = useState("");
+    const [gameImageUrl, setGameImageUrl] = useState("");
+    const [gameRoute, setGameRoute] = useState("");
+    const [uploadingImage, setUploadingImage] = useState(false);
 
-  useEffect(() => {
-    const fetchGames = async () => {
-      try {
-        const gamesCollection = collection(firestore, "games");
-        const gamesSnapshot = await getDocs(gamesCollection);
+    useEffect(() => {
+        const fetchGames = async () => {
+            try {
+                const gamesCollection = collection(firestore, "games");
+                const gamesSnapshot = await getDocs(gamesCollection);
 
-        const gamesList = gamesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Game, "id">),
-        }));
+                const gamesList = gamesSnapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...(doc.data() as Omit<Game, "id">),
+                }));
 
-        setGames(gamesList);
-      } catch (error) {
-        console.error("Error loading games:", error);
-        Alert.alert("Greška", "Došlo je do greške pri učitavanju igara.");
-      }
+                setGames(gamesList);
+            } catch (error) {
+                console.error("Error loading games:", error);
+                Alert.alert("Greška", "Došlo je do greške pri učitavanju igara.");
+            }
+        };
+
+        fetchGames();
+    }, []);
+
+    const resetForm = () => {
+        setGameTitle("");
+        setGameDescription("");
+        setGameImageUrl("");
+        setGameRoute("");
     };
 
-    fetchGames();
-  }, []);
+    const handleAddGame = async () => {
+        if (!gameTitle || !gameDescription || !gameImageUrl || !gameRoute) {
+            Alert.alert("Nedostaju podaci", "Molimo unesite sve podatke o igri.");
+            return;
+        }
 
-  const resetForm = () => {
-    setGameTitle("");
-    setGameDescription("");
-    setGameImageUrl("");
-    setGameRoute("");
-  };
+        if (!isLoggedIn) {
+            Alert.alert("Prijava je potrebna", "Za dodavanje nove igre prvo se prijavite u Auth tabu.");
+            return;
+        }
 
-  const handleAddGame = async () => {
-    if (!gameTitle || !gameDescription || !gameImageUrl || !gameRoute) {
-      Alert.alert("Nedostaju podaci", "Molimo unesite sve podatke o igri.");
-      return;
-    }
+        const newGame = {
+            title: gameTitle,
+            description: gameDescription,
+            imageUrl: gameImageUrl,
+            route: gameRoute,
+        };
 
-    if (!isLoggedIn) {
-      Alert.alert("Prijava je potrebna", "Za dodavanje nove igre prvo se prijavite u Auth tabu.");
-      return;
-    }
-
-    const newGame = {
-      title: gameTitle,
-      description: gameDescription,
-      imageUrl: gameImageUrl,
-      route: gameRoute,
+        try {
+            const docRef = await addDoc(collection(firestore, "games"), newGame);
+            setGames((prev) => [...prev, { id: docRef.id, ...newGame }]);
+            setModalVisible(false);
+            resetForm();
+            Alert.alert("Uspjeh", "Nova igra je uspješno dodana.");
+        } catch (error) {
+            console.error("Error adding game:", error);
+            Alert.alert("Greška", "Došlo je do greške pri dodavanju igre.");
+        }
     };
 
-    try {
-      const docRef = await addDoc(collection(firestore, "games"), newGame);
-      setGames((prev) => [...prev, { id: docRef.id, ...newGame }]);
-      setModalVisible(false);
-      resetForm();
-      Alert.alert("Uspjeh", "Nova igra je uspješno dodana.");
-    } catch (error) {
-      console.error("Error adding game:", error);
-      Alert.alert("Greška", "Došlo je do greške pri dodavanju igre.");
-    }
-  };
+    const handlePickImage = async () => {
+        try {
+            setUploadingImage(true);
+            const publicUrl = await pickAndUploadGameImage();
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Games</Text>
-      <Text style={styles.subtitle}>
-        Pregled dostupnih igara i dodavanje novih unosa u Firestore.
-      </Text>
+            if (publicUrl) {
+                setGameImageUrl(publicUrl);
+                Alert.alert("Uspjeh", "Slika je uploadana.");
+            }
+        } catch (error: any) {
+            Alert.alert("Greška", error.message ?? "Upload slike nije uspio.");
+        } finally {
+            setUploadingImage(false);
+        }
+    };
 
-      <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
-        <Text style={styles.addButtonText}>Dodaj igru</Text>
-      </Pressable>
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>Games</Text>
+            <Text style={styles.subtitle}>
+                Pregled dostupnih igara i dodavanje novih unosa u Firestore.
+            </Text>
 
-      <FlatList
-        data={games}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(item.route as any)}>
-            <GameCard game={item} />
-          </Pressable>
-        )}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-      />
+            <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
+                <Text style={styles.addButtonText}>Dodaj igru</Text>
+            </Pressable>
 
-      <AddGameModal
-        visible={modalVisible}
-        title={gameTitle}
-        description={gameDescription}
-        imageUrl={gameImageUrl}
-        route={gameRoute}
-        onChangeTitle={setGameTitle}
-        onChangeDescription={setGameDescription}
-        onChangeImageUrl={setGameImageUrl}
-        onChangeRoute={setGameRoute}
-        onClose={() => setModalVisible(false)}
-        onSubmit={handleAddGame}
-      />
-    </View>
-  );
+            <FlatList
+                data={games}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                    <Pressable onPress={() => router.push(item.route as any)}>
+                        <GameCard game={item} />
+                    </Pressable>
+                )}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.listContent}
+            />
+
+            <AddGameModal
+                visible={modalVisible}
+                title={gameTitle}
+                description={gameDescription}
+                imageUrl={gameImageUrl}
+                route={gameRoute}
+                uploadingImage={uploadingImage}
+                onChangeTitle={setGameTitle}
+                onChangeDescription={setGameDescription}
+                onChangeRoute={setGameRoute}
+                onPickImage={handlePickImage}
+                onClose={() => setModalVisible(false)}
+                onSubmit={handleAddGame}
+            />
+        </View>
+    );
 }
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -158,6 +176,4 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
     },
 });
-
-
 

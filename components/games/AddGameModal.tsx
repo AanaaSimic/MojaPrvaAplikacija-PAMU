@@ -1,80 +1,90 @@
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 type AddGameModalProps = {
-  visible: boolean;
-  title: string;
-  description: string;
-  imageUrl: string;
-  route: string;
-  onChangeTitle: (value: string) => void;
-  onChangeDescription: (value: string) => void;
-  onChangeImageUrl: (value: string) => void;
-  onChangeRoute: (value: string) => void;
-  onClose: () => void;
-  onSubmit: () => void;
+    visible: boolean;
+    title: string;
+    description: string;
+    imageUrl: string;
+    route: string;
+    uploadingImage: boolean;
+    onChangeTitle: (value: string) => void;
+    onChangeDescription: (value: string) => void;
+    onChangeRoute: (value: string) => void;
+    onPickImage: () => void;
+    onClose: () => void;
+    onSubmit: () => void;
 };
 
 export default function AddGameModal({
-  visible,
-  title,
-  description,
-  imageUrl,
-  route,
-  onChangeTitle,
-  onChangeDescription,
-  onChangeImageUrl,
-  onChangeRoute,
-  onClose,
-  onSubmit,
-}: AddGameModalProps) {
-  return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.backdrop}>
-        <View style={styles.content}>
-          <Text style={styles.modalTitle}>Dodaj igru</Text>
+                                         visible,
+                                         title,
+                                         description,
+                                         imageUrl,
+                                         route,
+                                         uploadingImage,
+                                         onChangeTitle,
+                                         onChangeDescription,
+                                         onChangeRoute,
+                                         onPickImage,
+                                         onClose,
+                                         onSubmit,
+                                     }: AddGameModalProps) {
+    return (
+        <Modal visible={visible} animationType="slide" transparent>
+            <View style={styles.backdrop}>
+                <View style={styles.content}>
+                    <Text style={styles.modalTitle}>Dodaj igru</Text>
 
-          <TextInput
-            placeholder="Naslov igre"
-            value={title}
-            onChangeText={onChangeTitle}
-            style={styles.input}
-          />
+                    <TextInput
+                        placeholder="Naslov igre"
+                        value={title}
+                        onChangeText={onChangeTitle}
+                        style={styles.input}
+                    />
 
-          <TextInput
-            placeholder="Opis igre"
-            value={description}
-            onChangeText={onChangeDescription}
-            style={[styles.input, styles.textArea]}
-            multiline
-          />
+                    <TextInput
+                        placeholder="Opis igre"
+                        value={description}
+                        onChangeText={onChangeDescription}
+                        style={[styles.input, styles.textArea]}
+                        multiline
+                    />
 
-          <TextInput
-            placeholder="URL slike"
-            value={imageUrl}
-            onChangeText={onChangeImageUrl}
-            style={styles.input}
-            autoCapitalize="none"
-          />
+                    <Pressable
+                        style={styles.imageButton}
+                        onPress={onPickImage}
+                        disabled={uploadingImage}
+                    >
+                        <Text style={styles.imageButtonText}>
+                            {uploadingImage ? "Upload u tijeku..." : "Odaberi i upload-aj sliku"}
+                        </Text>
+                    </Pressable>
 
-          <TextInput
-            placeholder="Route igre, npr. /game-one"
-            value={route}
-            onChangeText={onChangeRoute}
-            style={styles.input}
-            autoCapitalize="none"
-          />
+                    {imageUrl ? (
+                        <Text style={styles.imageStatus}>Slika je odabrana i uploadana.</Text>
+                    ) : (
+                        <Text style={styles.imageHint}>Slika još nije odabrana.</Text>
+                    )}
 
-          <Pressable style={styles.primaryButton} onPress={onSubmit}>
-            <Text style={styles.primaryButtonText}>Dodaj</Text>
-          </Pressable>
+                    <TextInput
+                        placeholder="Route igre, npr. /game-one"
+                        value={route}
+                        onChangeText={onChangeRoute}
+                        style={styles.input}
+                        autoCapitalize="none"
+                    />
 
-          <Pressable style={styles.secondaryButton} onPress={onClose}>
-            <Text style={styles.secondaryButtonText}>Zatvori</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
-  );
+                    <Pressable style={styles.primaryButton} onPress={onSubmit}>
+                        <Text style={styles.primaryButtonText}>Dodaj</Text>
+                    </Pressable>
+
+                    <Pressable style={styles.secondaryButton} onPress={onClose}>
+                        <Text style={styles.secondaryButtonText}>Zatvori</Text>
+                    </Pressable>
+                </View>
+            </View>
+        </Modal>
+    );
 }
 
 const styles = StyleSheet.create({
@@ -137,5 +147,28 @@ const styles = StyleSheet.create({
         color: "#111827",
         fontWeight: "600",
     },
+    imageButton: {
+        backgroundColor: "#dbeafe",
+        borderWidth: 1,
+        borderColor: "#93c5fd",
+        paddingVertical: 13,
+        borderRadius: 12,
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    imageButtonText: {
+        color: "#1d4ed8",
+        fontWeight: "700",
+    },
+    imageStatus: {
+        color: "#15803d",
+        marginBottom: 12,
+    },
+    imageHint: {
+        color: "#6b7280",
+        marginBottom: 12,
+    },
 });
+
+
 
